@@ -12,77 +12,87 @@ class GameLevelMeteorBlaster {
     // Background (Space Image)
     const image_src_space = path + "/images/gamify/space.png";
     const image_data_space = {
-        id: 'Space-Background',
-        src: image_src_space,
-        pixels: {height: 857, width: 1200}
+      id: 'Space-Background',
+      src: image_src_space,
+      pixels: { height: 857, width: 1200 }
     };
 
     // Player (Ufo/Robot)
-    const sprite_src_ufo = path + "/images/gamify/ufo.png"; // be sure to include the path
+    const sprite_src_ufo = path + "/images/gamify/ufo.png";
     const UFO_SCALE_FACTOR = 5;
-    const sprite_data_ufo = {
-        id: 'Ufo',
-        greeting: "Hi I am snowspeeder, the desert wanderer. I am trying to take donwn the empire's AT-ATs!",
-        src: sprite_src_ufo,
-        SCALE_FACTOR: UFO_SCALE_FACTOR,
-        STEP_FACTOR: 1000,
-        ANIMATION_RATE: 50,
-        INIT_POSITION: { x: 0, y: 0 }, 
-        pixels: {height: 422, width: 460},
-        orientation: {rows: 1, columns: 1 },
-        down: {row: 0, start: 0, columns: 1, rotate: -Math.PI/2 },
-        left: {row: 0, start: 0, columns: 1 },
-        right: {row: 0, start: 0, columns: 1, rotate: Math.PI },
-        up: {row: 0, start: 0, columns: 1, rotate: Math.PI/2 },
-        hitbox: { widthPercentage: 0.45, heightPercentage: 0.2 },
-        keypress: { up: 87, left: 65, down: 83, right: 68 } // W, A, S, D
+    this.playerData = {
+      id: 'Ufo',
+      greeting: "Hi I am snowspeeder, the desert wanderer. I am trying to take down the empire's AT-ATs!",
+      src: sprite_src_ufo,
+      SCALE_FACTOR: UFO_SCALE_FACTOR,
+      STEP_FACTOR: 1000,
+      ANIMATION_RATE: 50,
+      INIT_POSITION: { x: 100, y: height / 2 },
+      pixels: { height: 422, width: 460 },
+      orientation: { rows: 1, columns: 1 },
+      down: { row: 0, start: 0, columns: 1, rotate: -Math.PI / 2 },
+      left: { row: 0, start: 0, columns: 1 },
+      right: { row: 0, start: 0, columns: 1, rotate: Math.PI },
+      up: { row: 0, start: 0, columns: 1, rotate: Math.PI / 2 },
+      hitbox: { widthPercentage: 0.45, heightPercentage: 0.2 },
+      keypress: { up: 87, left: 65, down: 83, right: 68 } // W, A, S, D
     };
 
-    // Meteor Data
-    const sprite_src_meteor = path + "/images/gamify/meteor.png";
-    const sprite_data_meteor = {
-        id: 'Meteor',
-        src: sprite_src_meteor,
-        SCALE_FACTOR: 6,
-        pixels: {height: 64, width: 64},
-        INIT_POSITION: { x: Math.random() * width, y: -50 },
-        hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
-        movement: { x: 0, y: 5 } // Moves downward
-    };
+    // Laser Data
+    this.sprite_src_laser = path + "/images/gamify/laser_bolt.png";
 
-    const sprite_src_laser = path + "/images/gamify/turret_aa.png";
-    
     // List to track active projectiles
     this.projectiles = [];
 
-    document.addEventListener("keydown", (event) => {
-        if (event.code === "Space") { // Spacebar fires laser
-            let laser = new Projectile({
-                id: `Laser-${Math.random()}`,
-                src: sprite_src_laser,
-                SCALE_FACTOR: 3,
-                TRANSLATE_SCALE_FACTOR: 3, // Keep scale constant
-                pixels: {height: 16, width: 32},
-                INIT_POSITION: { 
-                    x: sprite_data_ufo.INIT_POSITION.x + sprite_data_ufo.pixels.width / 2, 
-                    y: sprite_data_ufo.INIT_POSITION.y
-                },
-                hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
-                movement: { x: 10, y: 0 }, // Move right
-                TRANSLATE_SIMULATION: { miliseconds: 1000, steps: 60 } // Moves over 1 second
-            }, gameEnv);
-            this.projectiles.push(laser);
-            this.classes.push({ class: Projectile, data: laser });
-        }
-    });
+    // Attach key event listener only once
+    this.handleKeydown = this.handleKeydown.bind(this);
+    document.addEventListener("keydown", this.handleKeydown);
 
     // List of objects for this level
     this.classes = [
-        { class: Background, data: image_data_space },
-        { class: Player, data: sprite_data_ufo },
-        // { class: Projectile, data: sprite_data_laser },
-        // { class: Npc, data: sprite_data_meteor } // Meteors as NPC objects
+      { class: Background, data: image_data_space },
+      { class: Player, data: this.playerData },
     ];
+
+    // Start game loop for projectiles
+    this.startGameLoop();
+  }
+
+  handleKeydown(event) {
+    if (event.code === "Space") { 
+      this.shootLaser();
+    }
+  }
+
+  shootLaser() {
+    const laser = new Projectile({
+      id: `Laser-${Math.random()}`,
+      src: this.sprite_src_laser,
+      SCALE_FACTOR: 2,
+      pixels: { height: 16, width: 32 },
+      INIT_POSITION: {
+        x: this.playerData.INIT_POSITION.x + this.playerData.pixels.width / 2,
+        y: this.playerData.INIT_POSITION.y + this.playerData.pixels.height / 2
+      },
+      hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
+      movement: { x: 15, y: 0 }, // Move right
+    });
+
+    this.projectiles.push(laser);
+    this.classes.push({ class: Projectile, data: laser });
+  }
+
+  startGameLoop() {
+    setInterval(() => {
+      this.projectiles.forEach((laser, index) => {
+        laser.INIT_POSITION.x += laser.movement.x;
+
+        // Remove laser if it moves off-screen
+        if (laser.INIT_POSITION.x > window.innerWidth) {
+          this.projectiles.splice(index, 1);
+        }
+      });
+    }, 16);
   }
 }
 
