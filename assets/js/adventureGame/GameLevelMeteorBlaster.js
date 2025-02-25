@@ -60,28 +60,12 @@ class GameLevelMeteorBlaster {
         INIT_POSITION: { x: 0, y: 0 },
         hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
         movement: { x: 0, y: -10 } // Moves upward
-    };
-
-    // NPC for Exit (Game Over Condition)
-    const exit_sprite = {
-        id: 'Exit',
-        greeting: "You've won the game!",
-        src: path + "/images/gamify/exit.png",
-        SCALE_FACTOR: 5,
-        INIT_POSITION: { x: width - 100, y: 50 },
-        pixels: {height: 64, width: 64},
-        hitbox: { widthPercentage: 0.1, heightPercentage: 0.2 },
-        interact: function() {
-            alert("Congratulations! You've survived the meteor storm!");
-            gameEnv.gameControl.gameOver(); // Exit minigame and return to main game
-        }
-    };
+    }; 
 
     // List of objects for this level
     this.classes = [
         { class: Background, data: image_data_space },
         { class: Player, data: sprite_data_ufo },
-        // { class: Npc, data: exit_sprite },
         // { class: Projectile, data: sprite_data_laser },
         // { class: Npc, data: sprite_data_meteor } // Meteors as NPC objects
     ];

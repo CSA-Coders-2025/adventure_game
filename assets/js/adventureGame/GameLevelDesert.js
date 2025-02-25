@@ -5,6 +5,7 @@ import Npc from './Npc.js';
 import Quiz from './Quiz.js';
 import GameControl from './GameControl.js';
 import GameLevelStarWars from './GameLevelStarWars.js';
+import GameLevelMeteorBlaster from './GameLevelMeteorBlaster.js';
 
 class GameLevelDesert {
   constructor(gameEnv) {
@@ -134,25 +135,22 @@ class GameLevelDesert {
       down: {row: 1, start: 0, columns: 6 },  // This is the stationary npc, down is default 
       hitbox: { widthPercentage: 0.1, heightPercentage: 0.2 },
       // Linux command quiz
-      quiz: { 
-        title: "Jupyter Notebook Command Quiz",
-        questions: [
-          "Which shortcut is used to run a cell in Jupyter Notebook?\n1. Shift + Enter\n2. Ctrl + Enter\n3. Alt + Enter\n4. Tab + Enter",
-          "Which shortcut adds a new cell above the current cell?\n1. A\n2. B\n3. C\n4. D",
-          "Which shortcut adds a new cell below the current cell?\n1. B\n2. A\n3. C\n4. D",
-          "Which shortcut changes a cell to Markdown format?\n1. M\n2. Y\n3. R\n4. K",
-          "Which shortcut changes a cell to Code format?\n1. Y\n2. M\n3. C\n4. D",
-          "Which shortcut deletes the current cell?\n1. D, D\n2. X\n3. Del\n4. Ctrl + D",
-          "Which shortcut saves the current notebook?\n1. Ctrl + S\n2. Alt + S\n3. Shift + S\n4. Tab + S",
-          "Which shortcut restarts the kernel?\n1. 0, 0\n2. R, R\n3. K, K\n4. Shift + R",
-          "Which shortcut interrupts the kernel?\n1. I, I\n2. Ctrl + C\n3. Shift + I\n4. Alt + I",
-          "Which shortcut toggles line numbers in a cell?\n1. L\n2. N\n3. T\n4. G"
-        ] 
-      },
       interact: function() {
-        let quiz = new Quiz(); // Create a new Quiz instance
-        quiz.initialize();
-        quiz.openPanel(sprite_data_robot.quiz);
+        // Set a primary game reference from the game environment
+        let primaryGame = gameEnv.gameControl;
+        // Define the game in game level
+        let levelArray = [GameLevelMeteorBlaster];
+        // Define a new GameControl instance with the StarWars level
+        let gameInGame = new GameControl(path,levelArray);
+        // Pause the primary game 
+        primaryGame.pause();
+        // Start the game in game
+        gameInGame.start();
+        // Setup "callback" function to allow transition from game in gaame to the underlying game
+        gameInGame.gameOver = function() {
+          // Call .resume on primary game
+          primaryGame.resume();
+        }
       }
     }
 
