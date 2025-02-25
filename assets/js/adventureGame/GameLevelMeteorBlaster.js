@@ -5,6 +5,7 @@ import Npc from './Npc.js';
 
 class GameLevelMeteorBlaster {
   constructor(gameEnv) {
+    this.gameEnv = gameEnv; // Store game environment reference
     let width = gameEnv.innerWidth;
     let height = gameEnv.innerHeight;
     let path = gameEnv.path;
@@ -22,7 +23,7 @@ class GameLevelMeteorBlaster {
     const UFO_SCALE_FACTOR = 5;
     this.playerData = {
       id: 'Ufo',
-      greeting: "Hi I am snowspeeder, the desert wanderer. I am trying to take down the empire's AT-ATs!",
+      greeting: "UFO",
       src: sprite_src_ufo,
       SCALE_FACTOR: UFO_SCALE_FACTOR,
       STEP_FACTOR: 1000,
@@ -76,19 +77,26 @@ class GameLevelMeteorBlaster {
       },
       hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
       movement: { x: 15, y: 0 }, // Move right
-    });
+    }, this.gameEnv);
 
     this.projectiles.push(laser);
     this.classes.push({ class: Projectile, data: laser });
+
+    // Ensure the game environment registers the new projectile
+    if (this.gameEnv.addObject) {
+      this.gameEnv.addObject(laser);
+    }
   }
 
   startGameLoop() {
     setInterval(() => {
       this.projectiles.forEach((laser, index) => {
-        laser.INIT_POSITION.x += laser.movement.x;
+        if (laser.data) {
+          laser.data.INIT_POSITION.x += laser.data.movement.x;
+        }
 
         // Remove laser if it moves off-screen
-        if (laser.INIT_POSITION.x > window.innerWidth) {
+        if (laser.data && laser.data.INIT_POSITION.x > window.innerWidth) {
           this.projectiles.splice(index, 1);
         }
       });
