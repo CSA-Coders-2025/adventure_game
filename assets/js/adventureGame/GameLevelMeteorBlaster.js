@@ -50,17 +50,31 @@ class GameLevelMeteorBlaster {
         movement: { x: 0, y: 5 } // Moves downward
     };
 
-    // Laser Projectile
-    const sprite_src_laser = path + "/images/gamify/laser.png";
-    const sprite_data_laser = {
-        id: 'Laser',
-        src: sprite_src_laser,
-        SCALE_FACTOR: 3,
-        pixels: {height: 16, width: 32},
-        INIT_POSITION: { x: 0, y: 0 },
-        hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
-        movement: { x: 0, y: -10 } // Moves upward
-    }; 
+    const sprite_src_laser = path + "/images/gamify/turret_aa.png";
+    
+    // List to track active projectiles
+    this.projectiles = [];
+
+    document.addEventListener("keydown", (event) => {
+        if (event.code === "Space") { // Spacebar fires laser
+            let laser = new Projectile({
+                id: `Laser-${Math.random()}`,
+                src: sprite_src_laser,
+                SCALE_FACTOR: 3,
+                TRANSLATE_SCALE_FACTOR: 3, // Keep scale constant
+                pixels: {height: 16, width: 32},
+                INIT_POSITION: { 
+                    x: sprite_data_ufo.INIT_POSITION.x + sprite_data_ufo.pixels.width / 2, 
+                    y: sprite_data_ufo.INIT_POSITION.y
+                },
+                hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
+                movement: { x: 10, y: 0 }, // Move right
+                TRANSLATE_SIMULATION: { miliseconds: 1000, steps: 60 } // Moves over 1 second
+            }, gameEnv);
+            this.projectiles.push(laser);
+            this.classes.push({ class: Projectile, data: laser });
+        }
+    });
 
     // List of objects for this level
     this.classes = [
