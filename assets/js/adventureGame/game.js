@@ -1,6 +1,5 @@
 import GameControl from './GameControl.js';
 
-
 class Game {
     // initialize user and launch GameControl 
     static main(path, pythonURI, javaURI, fetchOptions) {
@@ -48,6 +47,7 @@ class Game {
             })
             .then(data => {
                 if (!data) return;
+                console.log(data.id);
                 this.id = data.id;
                 this.fetchStats(data.id);
             })
@@ -56,7 +56,6 @@ class Game {
             });
     }
     
-
     static fetchStats(personId) {
         const endpoints = {
             balance: this.javaURI + '/rpg_answer/getBalance/' + personId,
@@ -74,10 +73,11 @@ class Game {
                 .catch(err => console.error(`Error fetching ${key}:`, err));
         }
     }
-    // called to update scoreboard and player stats
-    static updateStats(content, questionId, personId) {
+    
+    // Now updateStats is an async function that returns the updated score
+    static async updateStats(content, questionId, personId) {
         try {
-            const response = fetch(this.javaURI + '/rpg_answer/submitAnswer', {
+            const response = await fetch(this.javaURI + '/rpg_answer/submitAnswer', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -89,18 +89,19 @@ class Game {
                 })
             });
 
-            if (!response.ok) throw new Error("Network response was not ok");
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
 
-            const data = response.json();
+            const data = await response.json();
 
             return data.score || "Error scoring answer"; // Return score
-
         } catch (error) {
             console.error("Error submitting answer:", error);
             return "Error submitting answer";
         }
     }
-
+    
     static initStatsUI() {
         const statsContainer = document.createElement('div');
         statsContainer.id = 'stats-container';
@@ -119,5 +120,5 @@ class Game {
         document.body.appendChild(statsContainer);
     }
 }
-export default Game;
 
+export default Game;

@@ -1,4 +1,6 @@
 import gameControlInstance from "./GameControl.js";
+import Game from "./game.js";
+
 
 class Quiz {
     constructor() {
@@ -6,6 +8,7 @@ class Quiz {
         this.dim = false;
         this.currentNpc = null;
         this.currentPage = 0;
+        this.currentQuestionId = 1;
         this.injectStyles(); // Inject CSS styles dynamically
     }
 
@@ -324,38 +327,51 @@ class Quiz {
         return table;
     }
 
-    updateTable() {
+    updateTable(quizData) {
         const table = this.createDisplayTable();
-        if (this.currentNpc && this.currentNpc.questions) {
-            this.currentNpc.questions.forEach((question, index) => {
-                const row = document.createElement("tr");
-
-                const questionCell = document.createElement("td");
-                questionCell.innerText = `${index + 1}. ${question}`;
-                row.appendChild(questionCell);
-
-                const inputCell = document.createElement("td");
+    
+        if (quizData && quizData.question && quizData.choices) {
+            const row = document.createElement("tr");
+            
+            // Question Cell
+            const questionCell = document.createElement("td");
+            questionCell.colSpan = 2;
+            questionCell.innerText = `${quizData.question.title}: ${quizData.question.content}`;
+            questionCell.className = "quiz-question";
+            row.appendChild(questionCell);
+            table.appendChild(row);
+    
+            // Choices
+            quizData.choices.forEach((choice) => {
+                const choiceRow = document.createElement("tr");
+    
+                const choiceCell = document.createElement("td");
+                const label = document.createElement("label");
+                label.innerText = choice.choice;
+    
                 const input = document.createElement("input");
-                input.type = "text";
-                input.placeholder = "Your answer...";
-                input.dataset.questionIndex = index;
+                input.type = "radio";
+                input.name = "quiz-choice";
+                input.value = choice.id;
                 input.className = "quiz-input";
-                inputCell.appendChild(input);
-                row.appendChild(inputCell);
-                table.appendChild(row);
+    
+                choiceCell.appendChild(input);
+                choiceCell.appendChild(label);
+                choiceRow.appendChild(choiceCell);
+                table.appendChild(choiceRow);
             });
-
+    
             // Submit button row
             const submitRow = document.createElement("tr");
             const submitCell = document.createElement("td");
             submitCell.colSpan = 2;
             submitCell.style.textAlign = "center";
-
+    
             const submitButton = document.createElement("button");
             submitButton.innerText = "Submit";
             submitButton.className = "quiz-submit";
             submitButton.addEventListener("click", this.handleSubmit.bind(this));
-
+    
             submitCell.appendChild(submitButton);
             submitRow.appendChild(submitCell);
             table.appendChild(submitRow);
@@ -367,7 +383,7 @@ class Quiz {
             row.appendChild(noQuestionsCell);
             table.appendChild(row);
         }
-
+    
         const container = document.createElement("div");
         container.className = "quiz-content";
         container.appendChild(table);
@@ -441,51 +457,133 @@ class Quiz {
     }
 
     handleSubmit() {
-        const inputs = document.querySelectorAll(".quiz-input");
-        const answers = Array.from(inputs).map(input => ({
-            questionIndex: input.dataset.questionIndex,
-            answer: input.value.trim()
-        }));
-        console.log("Submitted Answers:", answers);
+        // Get the selected answer from the radio buttons
+        const selectedInput = document.querySelector('input[name="quiz-choice"]:checked');
+        if (!selectedInput) {
+            alert("Please select an answer.");
+            return;
+        }
+        const choiceId = parseInt(selectedInput.value);
+        // Use currentQuestionId as the question id
+        const questionId = this.currentQuestionId;
+        // Use Game.id as the person id (Game.id was set during initialization)
+        const personId = Game.id;
+        
+        if (!personId) {
+            alert("User id is not available yet. Please try again shortly.");
+            return;
+        }
+        
+        // Build payload to submit the MCQ answer for grading
+        const payload = {
+            questionId: questionId,
+            personId: personId,
+            choiceId: choiceId
+        };
 
-        // Trigger multi-wave confetti
-        this.triggerConfetti();
+        fetch("http://localhost:8085/rpg_answer/submitMCQAnswer", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok " + response.statusText);
+            }
+            return response.json();
+        })
+        .then(async data => {
+            console.log("Graded Answer:", data);
+            if (data.is_correct || data.correct) {
+                this.triggerConfetti();
+            }
+            
+            // Optionally extract answer content for updating stats.
+            // Here we assume the label text (next sibling) contains the answer text.
+            const answerContent = selectedInput.nextSibling ? selectedInput.nextSibling.innerText : "";
+            
+            // Now call Game.updateStats and await its result.
+            const updatedScore = await Game.updateStats(answerContent, questionId, personId);
+            console.log("Updated score:", updatedScore);
+            
+            // Celebration spin effect and load next question
+            const promptDropDown = document.getElementById("promptDropDown");
+            promptDropDown.classList.add("celebration-spin");
 
-        // Make the quiz container do a "celebration spin"
-        const promptDropDown = document.getElementById("promptDropDown");
-        promptDropDown.classList.add("celebration-spin");
-
-        alert("Your answers have been submitted!");
-        this.isOpen = false;
-        this.backgroundDim.remove();
+            this.currentQuestionId++;
+            this.loadQuestion();
+            alert("Your answer has been submitted and graded!");
+            this.isOpen = false;
+            this.backgroundDim.remove();
+        })
+        .catch(error => {
+            console.error("Error submitting answer:", error);
+            alert("Failed to submit answer. Please try again.");
+        });
     }
 
     openPanel(npc) {
         const promptDropDown = document.querySelector('.promptDropDown');
         const promptTitle = document.getElementById("promptTitle");
-
+        
+        // Reset the inline styles to ensure the panel is visible
+        promptDropDown.style.width = "50%";
+        promptDropDown.style.top = "15%";
+        promptDropDown.style.left = "50%";
+        promptDropDown.style.transform = "translate(-50%, 0)";
+        
+        // Remove any existing dim background before adding a new one
         if (this.isOpen) {
             this.backgroundDim.remove();
         }
-
+        
         this.currentNpc = npc;
         this.isOpen = true;
+        
+        // Clear previous content before appending new content
         promptDropDown.innerHTML = "";
-
+        promptDropDown.classList.remove("hidden"); // Ensure it's visible
+        
+        // Update prompt title
         promptTitle.style.display = "block";
         promptTitle.innerHTML = npc?.title || "Quiz Time!";
         promptDropDown.appendChild(promptTitle);
-
-        /* Wrap the entire content in a "scroll-edge" container for theming */
-        const scrollEdge = document.createElement("div");
-        scrollEdge.className = "scroll-edge";
-        scrollEdge.appendChild(this.updateTable());
-        promptDropDown.appendChild(scrollEdge);
-
+        
+        // Ensure loadQuestion repopulates the quiz properly
+        this.loadQuestion();
+        
+        // Re-apply background dim effect
         this.backgroundDim.create();
         promptDropDown.classList.add("quiz-popup");
     }
-
+    
+    loadQuestion() {
+        const promptDropDown = document.querySelector('.promptDropDown');
+    
+        fetch("http://localhost:8085/rpg_answer/getQuestion/" + this.currentQuestionId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("HTTP error! Status: " + response.status);
+                }
+                return response.json();
+            })
+            .then(quizData => {
+                /* Wrap the entire content in a "scroll-edge" container for theming */
+                const scrollEdge = document.createElement("div");
+                scrollEdge.className = "scroll-edge";
+                scrollEdge.appendChild(this.updateTable(quizData));
+                promptDropDown.appendChild(scrollEdge);
+            })
+            .catch(error => {
+                console.error("Error fetching quiz data:", error);
+                const errorMessage = document.createElement("p");
+                errorMessage.innerText = "Failed to load quiz data.";
+                promptDropDown.appendChild(errorMessage);
+            });
+    }
+    
     initialize() {
         const promptTitle = document.createElement("div");
         promptTitle.id = "promptTitle";
