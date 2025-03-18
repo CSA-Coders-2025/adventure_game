@@ -6,6 +6,7 @@ import Quiz from './Quiz.js';
 import GameControl from './GameControl.js';
 import GameLevelStarWars from './GameLevelStarWars.js';
 import GameLevelMeteorBlaster from './GameLevelMeteorBlaster.js';
+import GameLevelRaceCar from './GameLevelRaceCar.js';
 
 class GameLevelDesert {
   constructor(gameEnv) {
@@ -91,8 +92,6 @@ class GameLevelDesert {
     
       };
 
-
-
       // NPC data for Octocat
       const sprite_src_octocat = path + "/images/gamify/octocat.png"; // be sure to include the path
       const sprite_greet_octocat = "Hi I am Octocat! I am the GitHub code code code collaboration mascot";
@@ -124,12 +123,25 @@ class GameLevelDesert {
           ] 
         },
         reaction: function() {
-          alert(sprite_greet_octocat);
+          alert(sprite_greet_robot);
         },
+  
         interact: function() {
-          let quiz = new Quiz(); // Create a new Quiz instance
-          quiz.initialize();
-          quiz.openPanel(sprite_data_octocat.quiz);
+          // Set a primary game reference from the game environment
+          let primaryGame = gameEnv.gameControl;
+          // Define the game in game level
+          let levelArray = [GameLevelRaceCar];
+          // Define a new GameControl instance with the StarWars level
+          let gameInGame = new GameControl(gameEnv.game, levelArray);
+          // Pause the primary game 
+          primaryGame.pause();
+          // Start the game in game
+          gameInGame.start();
+          // Setup "callback" function to allow transition from game in gaame to the underlying game
+          gameInGame.gameOver = function() {
+            // Call .resume on primary game
+            primaryGame.resume();
+          }
         }
     }
 
