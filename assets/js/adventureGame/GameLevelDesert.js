@@ -93,57 +93,57 @@ class GameLevelDesert {
       };
 
       // NPC data for Octocat
-      const sprite_src_octocat = path + "/images/gamify/octocat.png"; // be sure to include the path
-      const sprite_greet_octocat = "Hi I am Octocat! I am the GitHub code code code collaboration mascot";
-      const sprite_data_octocat = {
-        id: 'Octocat',
-        greeting: sprite_greet_octocat,
-        src: sprite_src_octocat,
-        SCALE_FACTOR: 10,  // Adjust this based on your scaling needs
-        ANIMATION_RATE: 50,
-        pixels: {height: 301, width: 801},
-        INIT_POSITION: { x: (width / 4), y: (height / 4)},
-        orientation: {rows: 1, columns: 4 },
-        down: {row: 0, start: 0, columns: 3 },  // This is the stationary npc, down is default 
-        hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
-        // GitHub command quiz 
-        quiz: { 
-          title: "GitHub Command Quiz",
-          questions: [
-            "Which command is used to clone a repository?\n1. git clone\n2. git fork\n3. git copy\n4. git download",
-            "Which command is used to add changes to the staging area?\n1. git add\n2. git stage\n3. git commit\n4. git push",
-            "Which command is used to commit changes?\n1. git commit\n2. git add\n3. git save\n4. git push",
-            "Which command is used to push changes to a remote repository?\n1. git push\n2. git upload\n3. git send\n4. git commit",
-            "Which command is used to pull changes from a remote repository?\n1. git pull\n2. git fetch\n3. git receive\n4. git update",
-            "Which command is used to check the status of the working directory and staging area?\n1. git status\n2. git check\n3. git info\n4. git log",
-            "Which command is used to create a new branch?\n1. git branch\n2. git create-branch\n3. git new-branch\n4. git checkout",
-            "Which command is used to switch to a different branch?\n1. git checkout\n2. git switch\n3. git change-branch\n4. git branch",
-            "Which command is used to merge branches?\n1. git merge\n2. git combine\n3. git join\n4. git integrate",
-            "Which command is used to view the commit history?\n1. git log\n2. git history\n3. git commits\n4. git show"
-          ] 
-        },
-        reaction: function() {
-          alert(sprite_greet_robot);
-        },
-  
-        interact: function() {
-          // Set a primary game reference from the game environment
-          let primaryGame = gameEnv.gameControl;
-          // Define the game in game level
-          let levelArray = [GameLevelRaceCar];
-          // Define a new GameControl instance with the StarWars level
-          let gameInGame = new GameControl(gameEnv.game, levelArray);
-          // Pause the primary game 
-          primaryGame.pause();
-          // Start the game in game
-          gameInGame.start();
-          // Setup "callback" function to allow transition from game in gaame to the underlying game
-          gameInGame.gameOver = function() {
-            // Call .resume on primary game
-            primaryGame.resume();
-          }
+    const sprite_src_octocat = path + "/images/gamify/octocat.png"; // be sure to include the path
+    const sprite_greet_octocat = "Hi I am Octocat! I am the GitHub code code code collaboration mascot";
+    const sprite_data_octocat = {
+      id: 'Octocat',
+      greeting: sprite_greet_octocat,
+      src: sprite_src_octocat,
+      SCALE_FACTOR: 10,  // Adjust this based on your scaling needs
+      ANIMATION_RATE: 50,
+      pixels: {height: 301, width: 801},
+      INIT_POSITION: { x: (width / 4), y: (height / 4)},
+      orientation: {rows: 1, columns: 4 },
+      down: {row: 0, start: 0, columns: 3 },  // This is the stationary npc, down is default 
+      hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
+      // GitHub command quiz 
+      quiz: { 
+        title: "GitHub Command Quiz",
+        questions: [
+          "Which command is used to clone a repository?\n1. git clone\n2. git fork\n3. git copy\n4. git download",
+          "Which command is used to add changes to the staging area?\n1. git add\n2. git stage\n3. git commit\n4. git push",
+          "Which command is used to commit changes?\n1. git commit\n2. git add\n3. git save\n4. git push",
+          "Which command is used to push changes to a remote repository?\n1. git push\n2. git upload\n3. git send\n4. git commit",
+          "Which command is used to pull changes from a remote repository?\n1. git pull\n2. git fetch\n3. git receive\n4. git update",
+          "Which command is used to check the status of the working directory and staging area?\n1. git status\n2. git check\n3. git info\n4. git log",
+          "Which command is used to create a new branch?\n1. git branch\n2. git create-branch\n3. git new-branch\n4. git checkout",
+          "Which command is used to switch to a different branch?\n1. git checkout\n2. git switch\n3. git change-branch\n4. git branch",
+          "Which command is used to merge branches?\n1. git merge\n2. git combine\n3. git join\n4. git integrate",
+          "Which command is used to view the commit history?\n1. git log\n2. git history\n3. git commits\n4. git show"
+        ] 
+      },
+      reaction: function() {
+        alert(sprite_greet_octocat);
+      },
+
+      interact: function() {
+        // Set a primary game reference from the game environment
+        let primaryGame = gameEnv.gameControl;
+        // Define the game in game level
+        let levelArray = [GameLevelRaceCar];
+        // Define a new GameControl instance with the StarWars level
+        let gameInGame = new GameControl(gameEnv.game, levelArray);
+        // Pause the primary game 
+        primaryGame.pause();
+        // Start the game in game
+        gameInGame.start();
+        // Setup "callback" function to allow transition from game in gaame to the underlying game
+        gameInGame.gameOver = function() {
+          // Call .resume on primary game
+          primaryGame.resume();
         }
-    }
+      }
+    };
 
     const sprite_src_stocks = path + "/images/gamify/stockguy.png"; // Path to the NPC sprite
     const sprite_greet_stocks = "Teleport to the stock market?";
