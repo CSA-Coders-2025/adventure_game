@@ -473,88 +473,117 @@ class Quiz {
         // Wait half a second so the star confetti starts
         // after the squares, creating a 2-wave effect
     }
-    openPanel(npc, category, preFetchedQuestions = null) {
-        this.currentNpc = npc;
-        this.currentPage = 0;
+    async openPanel(npcData, callback, preFetchedQuestions = null) {
+        console.log("Opening quiz panel with data:", npcData);
+    
+        if (this.isOpen) {
+            this.closePanel();
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    
+        let promptDropDown = document.getElementById("promptDropDown");
+        if (!promptDropDown) {
+            this.initialize();
+            promptDropDown = document.getElementById("promptDropDown");
+        } else {
+            promptDropDown.innerHTML = "";
+        }
+    
         this.isOpen = true;
-        this.dim = true;
-
-        // Create dimmed background
-        const dim = document.createElement("div");
-        dim.id = "dim";
-        document.body.appendChild(dim);
-
-        // Create quiz popup
-        const quizPopup = document.createElement("div");
-        quizPopup.className = "quiz-popup";
-        document.body.appendChild(quizPopup);
-
-        // Create quiz content
-        const quizContent = document.createElement("div");
-        quizContent.className = "quiz-content";
-        quizPopup.appendChild(quizContent);
-
-        // Create quiz table
-        const quizTable = document.createElement("table");
-        quizTable.className = "quiz-table";
-        quizContent.appendChild(quizTable);
-
-        // Create table header
-        const tableHeader = document.createElement("thead");
-        quizTable.appendChild(tableHeader);
-        const headerRow = document.createElement("tr");
-        tableHeader.appendChild(headerRow);
-        const headerCell = document.createElement("th");
-        headerCell.textContent = `Quiz for ${npc.name}`;
-        headerRow.appendChild(headerCell);
-
-        // Create table body
-        const tableBody = document.createElement("tbody");
-        quizTable.appendChild(tableBody);
-
-        // Create question row
-        const questionRow = document.createElement("tr");
-        tableBody.appendChild(questionRow);
-        const questionCell = document.createElement("td");
-        questionRow.appendChild(questionCell);
-
-        // Create question input
-        const questionInput = document.createElement("input");
-        questionInput.type = "text";
-        questionInput.className = "quiz-input";
-        questionInput.placeholder = "Enter your answer...";
-        questionCell.appendChild(questionInput);
-
-        // Create submit button
-        const submitButton = document.createElement("button");
-        submitButton.className = "quiz-submit";
-        submitButton.textContent = "Submit";
-        quizPopup.appendChild(submitButton);
-
-        // Fetch questions from backend
-        fetch(`http://localhost:8085/api/questions/category/${category}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    this.currentQuestion = data[0];
-                    questionInput.value = this.currentQuestion.question;
-                } else {
-                    throw new Error("No questions available");
+    
+        let formattedQuestion;
+        try {
+            // If preFetchedQuestions is provided, use it directly
+            if (preFetchedQuestions) {
+                formattedQuestion = {
+                    title: "Finance Challenge",
+                    question: preFetchedQuestions.question,
+                    type: preFetchedQuestions.type,
+                    options: preFetchedQuestions.options,
+                    correctAnswer: preFetchedQuestions.correctAnswer,
+                    acceptableAnswers: preFetchedQuestions.acceptableAnswers
+                };
+            } else {
+                // Try to fetch from backend
+                const response = await Game.fetchQuestionByCategory(npcData);
+                if (!response || !response.questions || response.questions.length === 0) {
+                    throw new Error("No questions available from backend");
                 }
-            })
-            .catch(error => {
-                console.error("Error fetching questions:", error);
-                if (preFetchedQuestions && preFetchedQuestions.length > 0) {
-                    this.currentQuestion = preFetchedQuestions[0];
-                    questionInput.value = this.currentQuestion.question;
-                } else {
-                    this.closePanel();
+    
+                const questionList = response.questions;
+    
+                if (!this.answeredQuestionsByNpc[npcData]) {
+                    this.answeredQuestionsByNpc[npcData] = new Set();
                 }
-            });
-
-        // Add event listeners
-        submitButton.addEventListener("click", () => this.submitAnswer(questionInput.value));
-        dim.addEventListener("click", () => this.closePanel());
+                const answered = this.answeredQuestionsByNpc[npcData];
+    
+                const availableQuestions = questionList.filter(
+                    q => !answered.has(q.question.id)
+                );
+    
+                if (availableQuestions.length === 0) {
+                    alert("You've answered all available questions from this NPC!");
+                    this.isOpen = false;
+                    return;
+                }
+    
+                const questionEntry = availableQuestions[0];
+    
+                formattedQuestion = {
+                    title: npcData + " Quiz",
+                    npcCategory: npcData,
+                    question: questionEntry.question.content,
+                    type: "multiple-choice",
+                    options: questionEntry.choices.map(c => c.choice),
+                    correctAnswer: questionEntry.choices.findIndex(c => c.is_correct),
+                    questionId: questionEntry.question.id,
+                    choiceIds: questionEntry.choices.map(c => c.id)
+                };
+            }
+        } catch (error) {
+            console.error("Error fetching question:", error);
+            // If we have preFetchedQuestions, use it as fallback
+            if (preFetchedQuestions) {
+                formattedQuestion = {
+                    title: "Finance Challenge",
+                    question: preFetchedQuestions.question,
+                    type: preFetchedQuestions.type,
+                    options: preFetchedQuestions.options,
+                    correctAnswer: preFetchedQuestions.correctAnswer,
+                    acceptableAnswers: preFetchedQuestions.acceptableAnswers
+                };
+            } else {
+                console.error("No fallback questions available");
+                this.isOpen = false;
+                return;
+            }
+        }
+    
+        this.currentNpc = formattedQuestion;
+        this.callback = callback;
+    
+        // Setup quiz UI
+        promptDropDown.style.display = "block";
+        promptDropDown.style.position = "fixed";
+        promptDropDown.style.width = "50%";
+        promptDropDown.style.left = "50%";
+        promptDropDown.style.top = "15%";
+        promptDropDown.style.transform = "translateX(-50%)";
+        promptDropDown.style.zIndex = "9999";
+    
+        const newPromptTitle = document.createElement("div");
+        newPromptTitle.id = "promptTitle";
+        newPromptTitle.style.display = "block";
+        newPromptTitle.innerHTML = formattedQuestion.title;
+        promptDropDown.appendChild(newPromptTitle);
+    
+        const scrollEdge = document.createElement("div");
+        scrollEdge.className = "scroll-edge";
+        scrollEdge.appendChild(this.updateTable());
+        promptDropDown.appendChild(scrollEdge);
+    
+        this.backgroundDim.create();
+        promptDropDown.classList.add("quiz-popup");
     }
     
     
