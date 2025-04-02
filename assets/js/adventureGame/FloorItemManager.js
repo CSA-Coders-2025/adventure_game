@@ -62,9 +62,9 @@ class FloorItemManager {
             quantity: 1
         };
 
-        // Position at the center of the game container
-        const x = gameContainer.offsetWidth / 2;
-        const y = gameContainer.offsetHeight / 2;
+        // Position at the bottom center of the game container
+        const x = window.innerWidth / 2;
+        const y = window.innerHeight - 100; // 100px from bottom
 
         console.log('Spawning test item at:', x, y);
 

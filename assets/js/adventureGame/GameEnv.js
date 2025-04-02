@@ -18,6 +18,7 @@
  * @property {number} innerHeight - The inner height of the game area.
  * @property {number} top - The top offset of the game area.
  * @property {number} bottom - The bottom offset of the game area.
+ * @property {boolean} isFullscreen - Indicates whether the game is in fullscreen mode.
  */
 class GameEnv {
     constructor() {
@@ -28,6 +29,7 @@ class GameEnv {
         this.innerHeight = 0;
         this.top = 0;
         this.bottom = 0;
+        this.isFullscreen = false;
         /* Below properties are not part of is-A or has-A relationships,
         *  they are references for easy accessibility in game objects */
         this.game = null; // Reference to the Game static environment variables
@@ -45,10 +47,8 @@ class GameEnv {
      */
     create() {
         this.setCanvas();
-        this.setTop();
-        this.setBottom();
-        this.innerWidth = window.innerWidth;
-        this.innerHeight = window.innerHeight - this.top - this.bottom;
+        this.setupFullscreenToggle();
+        this.updateDimensions();
         this.size();
     }
 
@@ -82,18 +82,21 @@ class GameEnv {
     size() {
         this.canvas.width = this.innerWidth;
         this.canvas.height = this.innerHeight;
-        this.canvas.style.width = `${this.innerWidth}px`;
-        this.canvas.style.height = `${this.innerHeight}px`;
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
         this.canvas.style.position = 'absolute';
-        this.canvas.style.left = '0px';
-        this.canvas.style.top = `${this.top}px`;
+        this.canvas.style.left = '0';
+        this.canvas.style.top = '0';
     }
 
     /**
      * Resizes the game environment by re-creating it.
      */
     resize() {
-        this.create();
+        if (this.isFullscreen) {
+            this.updateDimensions();
+            this.size();
+        }
     }
 
     /**
@@ -103,6 +106,42 @@ class GameEnv {
      */
     clear() {
         this.ctx.clearRect(0, 0, this.innerWidth, this.innerHeight);
+    }
+
+    setupFullscreenToggle() {
+        const toggle = document.createElement('button');
+        toggle.id = 'fullscreenToggle';
+        toggle.innerHTML = '🎮 Toggle Fullscreen';
+        toggle.onclick = () => this.toggleFullscreen();
+        document.body.appendChild(toggle);
+    }
+
+    toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+        const container = document.getElementById('gameContainer');
+        const toggle = document.getElementById('fullscreenToggle');
+        
+        if (this.isFullscreen) {
+            container.classList.remove('windowed');
+            toggle.innerHTML = '🎮 Exit Fullscreen';
+            this.updateDimensions();
+            this.size();
+        } else {
+            container.classList.add('windowed');
+            toggle.innerHTML = '🎮 Toggle Fullscreen';
+            this.updateDimensions();
+            this.size();
+        }
+    }
+
+    updateDimensions() {
+        if (this.isFullscreen) {
+            this.innerWidth = window.innerWidth;
+            this.innerHeight = window.innerHeight;
+        } else {
+            this.innerWidth = 800;
+            this.innerHeight = 600;
+        }
     }
 }
 

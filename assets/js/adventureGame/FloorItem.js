@@ -25,6 +25,8 @@ class FloorItem {
                 align-items: center;
                 gap: 5px;
                 transition: transform 0.2s;
+                position: fixed;
+                z-index: 1000;
             }
             .floor-item:hover {
                 transform: scale(1.1);
@@ -47,19 +49,13 @@ class FloorItem {
             <div class="item-name">${this.item.name}</div>
         `;
         
-        // Position relative to game container
-        const gameContainer = document.getElementById('gameContainer');
-        if (gameContainer) {
-            this.element.style.position = 'absolute';
-            this.element.style.left = `${this.x}px`;
-            this.element.style.top = `${this.y}px`;
-            this.element.style.zIndex = '1000'; // Make sure it's above other elements
-            this.element.style.transform = 'translate(-50%, -50%)'; // Center the item
-            gameContainer.appendChild(this.element);
-            console.log('Added floor item to game container at:', this.x, this.y);
-        } else {
-            console.log('Game container not found for floor item');
-        }
+        // Position relative to viewport
+        this.element.style.left = `${this.x}px`;
+        this.element.style.top = `${this.y}px`;
+        this.element.style.transform = 'translate(-50%, -50%)'; // Center the item
+        
+        document.body.appendChild(this.element);
+        console.log('Added floor item at:', this.x, this.y);
 
         this.element.addEventListener('click', () => this.onClick());
     }
