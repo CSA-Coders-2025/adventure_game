@@ -24,7 +24,8 @@ export const defaultItems = {
         description: "Increases trading profits by 50% for 30 seconds.",
         emoji: "⚡",
         stackable: true,
-        value: 200
+        value: 200,
+        isConsumable: true
     },
     speed_boost: {
         id: "speed_boost",
@@ -32,7 +33,8 @@ export const defaultItems = {
         description: "Increases movement speed by 25% for 20 seconds.",
         emoji: "🚀",
         stackable: true,
-        value: 150
+        value: 150,
+        isConsumable: true
     },
     
     // Collectibles
@@ -60,7 +62,8 @@ export const defaultItems = {
         description: "Helps calculate complex financial metrics.",
         emoji: "🧮",
         stackable: false,
-        value: 1000
+        value: 1000,
+        isCalculator: true
     },
     market_scanner: {
         id: "market_scanner",
@@ -76,7 +79,16 @@ export const defaultItems = {
         description: "Calculate Return on Investment for your trades.",
         emoji: "📊",
         stackable: false,
-        value: 300,
+        value: 1500,
         isCalculator: true
+    },
+    trading_journal: {
+        id: "trading_journal",
+        name: "Trading Journal",
+        description: "Record and track your trading activities and performance.",
+        emoji: "📓",
+        stackable: false,
+        value: 1200,
+        isJournal: true
     }
 }; 

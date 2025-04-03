@@ -517,12 +517,6 @@ class Inventory {
         const closeBtn = container.querySelector(".close-inventory");
         closeBtn.addEventListener("click", () => this.close());
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === ".") {
-                this.toggle();
-            }
-        });
-
         this.makeDraggable(container);
     }
 
@@ -638,6 +632,9 @@ class Inventory {
             this.items.push({ ...item, quantity: 1 });
             this.saveToCookies();
             this.updateDisplay();
+            document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+                detail: { items: this.items }
+            }));
             return true;
         }
 
@@ -651,16 +648,19 @@ class Inventory {
         
         this.saveToCookies();
         this.updateDisplay();
+        document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+            detail: { items: this.items }
+        }));
         return true;
     }
 
-    removeItem(itemId, amount = 1) {
+    removeItem(itemId, quantity = 1) {
         const itemIndex = this.items.findIndex(item => item.id === itemId);
         if (itemIndex === -1) return false;
 
         const item = this.items[itemIndex];
-        if (item.quantity > amount) {
-            item.quantity -= amount;
+        if (item.quantity > quantity) {
+            item.quantity -= quantity;
         } else {
             this.items.splice(itemIndex, 1);
             if (itemId.startsWith('game_key') || itemId.startsWith('meteor_key') || 
@@ -672,6 +672,9 @@ class Inventory {
 
         this.updateDisplay();
         this.saveToCookies();
+        document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+            detail: { items: this.items }
+        }));
         return true;
     }
 
@@ -1108,10 +1111,6 @@ class Inventory {
                 overlay.classList.add("active");
             }
         }
-
-        if (gameContainer && gameContainer.gameControl) {
-            gameContainer.gameControl.pause();
-        }
     }
 
     close() {
@@ -1130,10 +1129,6 @@ class Inventory {
             if (overlay) {
                 overlay.classList.remove("active");
             }
-        }
-        
-        if (gameContainer && gameContainer.gameControl) {
-            gameContainer.gameControl.resume();
         }
     }
 

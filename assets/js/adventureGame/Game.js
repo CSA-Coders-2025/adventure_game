@@ -9,6 +9,7 @@ import Quiz from './Quiz.js';
 import Character from "./Character.js";
 import Inventory from "./Inventory.js";
 import { defaultItems } from "./items.js";
+import MinecraftInventory from './MinecraftInventory.js';
 
 class Game {
     constructor() {
@@ -19,6 +20,9 @@ class Game {
         
         // Give starting items to the player
         this.giveStartingItems();
+        
+        // Initialize Minecraft-style inventory with a more robust approach
+        this.initializeMinecraftInventory();
     }
 
     // initialize user and launch GameControl 
@@ -365,6 +369,105 @@ class Game {
         // Add ROI Calculator
         console.log("Adding ROI Calculator...");
         this.giveItem('roi_calculator', 1);     // 1 ROI Calculator
+        
+        // Add Trading Journal
+        console.log("Adding Trading Journal...");
+        this.giveItem('trading_journal', 1);    // 1 Trading Journal
+        
+        console.log("Final inventory after adding starting items:", this.inventory.items);
+    }
+
+    // New method to ensure Minecraft inventory is properly initialized
+    initializeMinecraftInventory() {
+        console.log("Starting Minecraft inventory initialization...");
+        
+        // Make sure the DOM is fully loaded before initializing
+        if (document.readyState === 'complete') {
+            this.createMinecraftInventory();
+        } else {
+            // Wait for the DOM to be fully loaded
+            window.addEventListener('load', () => {
+                this.createMinecraftInventory();
+            });
+        }
+        
+        // Also set a fallback timer to check periodically if inventory needs population
+        this.inventoryCheckInterval = setInterval(() => {
+            if (this.minecraftInventory) {
+                // Check if hotbar is empty but inventory has items
+                const hotbarEmpty = !this.minecraftInventory.hotbarItems.some(item => item);
+                const inventoryHasItems = this.inventory.items && this.inventory.items.length > 0;
+                
+                if (hotbarEmpty && inventoryHasItems) {
+                    console.log("Detected empty hotbar with items in inventory, repopulating...");
+                    this.minecraftInventory.forcePopulateFromInventory();
+                    this.setItemsToMinecraftInventory();
+                }
+            }
+        }, 2000); // Check every 2 seconds
+    }
+    
+    // Helper method to create the Minecraft inventory
+    createMinecraftInventory() {
+        console.log("Creating Minecraft inventory...");
+        try {
+            // Check if inventory bar exists in DOM
+            const inventoryBar = document.getElementById('inventory-bar');
+            if (!inventoryBar) {
+                console.error('Inventory bar element not found in DOM');
+                setTimeout(() => this.createMinecraftInventory(), 500); // Retry in 500ms
+                return;
+            }
+            
+            // Create the Minecraft inventory instance
+            this.minecraftInventory = MinecraftInventory.getInstance();
+            
+            // Ensure the inventory has items before trying to populate
+            if (!this.inventory.items || this.inventory.items.length === 0) {
+                console.log("No items in inventory, adding starting items again");
+                this.giveStartingItems();
+            }
+            
+            // Force an inventory update to ensure items appear
+            document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+                detail: { items: this.inventory.items }
+            }));
+            
+            // Also directly set items to slots as a fallback
+            this.setItemsToMinecraftInventory();
+            
+            // Force another inventory update after a brief delay
+            setTimeout(() => {
+                console.log("Performing delayed inventory population");
+                this.minecraftInventory.forcePopulateFromInventory();
+                this.setItemsToMinecraftInventory();
+            }, 1000);
+            
+            console.log("Minecraft inventory initialization complete");
+        } catch (error) {
+            console.error("Error initializing Minecraft inventory:", error);
+        }
+    }
+    
+    // New method to directly set items to minecraft inventory slots
+    setItemsToMinecraftInventory() {
+        if (!this.minecraftInventory) {
+            console.error("Cannot set items - Minecraft inventory not initialized");
+            return;
+        }
+        
+        try {
+            const inventoryItems = this.inventory.items;
+            console.log("Directly setting items to Minecraft inventory:", inventoryItems);
+            
+            // Set items to specific slots
+            for (let i = 0; i < Math.min(inventoryItems.length, 10); i++) {
+                this.minecraftInventory.setItemInSlot(i, inventoryItems[i]);
+                console.log(`Direct set: Item ${inventoryItems[i].name} to slot ${i}`);
+            }
+        } catch (error) {
+            console.error("Error setting items to Minecraft inventory:", error);
+        }
     }
 }
 
