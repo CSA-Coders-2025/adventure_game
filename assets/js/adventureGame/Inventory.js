@@ -1141,6 +1141,16 @@ class Inventory {
 
     addStartingItems() {
         this.addItem({
+            id: 'help_guide',
+            name: 'Help Guide',
+            description: 'A comprehensive guide on how to play the game. Press \ key to open.',
+            emoji: '❓',
+            stackable: false,
+            value: 0,
+            quantity: 1
+        });
+        
+        this.addItem({
             id: 'roi_calculator',
             name: 'ROI Calculator',
             description: 'Calculate Return on Investment for your trades.',

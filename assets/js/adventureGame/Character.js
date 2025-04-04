@@ -52,16 +52,42 @@ class Character extends GameObject {
             direction: 'right',
             isDying: false,
             isFinishing: false,
+            collisionEvents: []
         }; // Object control data
 
+        // Get current level from game container
+        const gameContainer = document.getElementById("gameContainer");
+        const currentLevel = gameContainer ? gameContainer.getAttribute('data-current-level') : null;
+        
         // Create canvas element
         this.canvas = document.createElement("canvas");
-        this.canvas.id = data.id || "default";
-        this.canvas.width = data.pixels?.width || PIXELS.width;
-        this.canvas.height = data.pixels?.height || PIXELS.height;
+        this.canvas.id = data?.id || "default";
+        this.canvas.width = data?.pixels?.width || PIXELS.width;
+        this.canvas.height = data?.pixels?.height || PIXELS.height;
+        
+        // Mark this character with the current level
+        if (currentLevel) {
+            this.canvas.setAttribute('data-level', currentLevel);
+            this.canvas.classList.add(`level-${currentLevel}`);
+        }
+        
+        // Store level information
+        this.levelName = currentLevel || data?.levelName;
+        
         this.hitbox = data?.hitbox || {};
         this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-        document.getElementById("gameContainer").appendChild(this.canvas);
+        
+        // Set a reference to the element for easier access in other methods
+        this.element = this.canvas;
+        
+        // Add to game container
+        if (gameContainer) {
+            gameContainer.appendChild(this.canvas);
+        } else {
+            console.warn("Game container not found, character may not be visible");
+            // Add to body as fallback
+            document.body.appendChild(this.canvas);
+        }
 
         // Set initial object properties 
         this.x = 0;
@@ -69,11 +95,11 @@ class Character extends GameObject {
         this.frame = 0;
         
         // Initialize the object's properties 
-        this.scale = { width: this.gameEnv.innerWidth, height: this.gameEnv.innerHeight };
-        this.scaleFactor = data.SCALE_FACTOR || SCALE_FACTOR;
-        this.stepFactor = data.STEP_FACTOR || STEP_FACTOR;
-        this.animationRate = data.ANIMATION_RATE || ANIMATION_RATE;
-        this.position = data.INIT_POSITION || INIT_POSITION;
+        this.scale = { width: this.gameEnv?.innerWidth || window.innerWidth, height: this.gameEnv?.innerHeight || window.innerHeight };
+        this.scaleFactor = data?.SCALE_FACTOR || SCALE_FACTOR;
+        this.stepFactor = data?.STEP_FACTOR || STEP_FACTOR;
+        this.animationRate = data?.ANIMATION_RATE || ANIMATION_RATE;
+        this.position = data?.INIT_POSITION || INIT_POSITION;
         
         // Always set spriteData, even if there's no sprite sheet
         this.spriteData = data;
@@ -83,6 +109,11 @@ class Character extends GameObject {
             // Load the sprite sheet
             this.spriteSheet = new Image();
             this.spriteSheet.src = data.src;
+            
+            // Make sure sprite is loaded
+            this.spriteSheet.onload = () => {
+                this.draw(); // Redraw once loaded
+            };
 
             // Initialize animation properties
             this.frameIndex = 0; // index reference to current frame
@@ -95,26 +126,124 @@ class Character extends GameObject {
 
         // Set the initial size and velocity of the object
         this.resize();
+        
+        // Force a draw to ensure visibility
+        setTimeout(() => this.draw(), 0);
     }
-
 
     /**
      * Manages the object's look, state, and movement. 
      * 
      */
     update() {
+        // Only update if this character belongs to the current level
+        if (!this.isInCurrentLevel()) {
+            return;
+        }
+        
+        // Update normal operations
         this.draw();
         this.collisionChecks();
         this.move();
     }
 
+    /**
+     * Checks if this character belongs to the current level
+     */
+    isInCurrentLevel() {
+        const gameContainer = document.getElementById("gameContainer");
+        const currentLevel = gameContainer ? gameContainer.getAttribute('data-current-level') : null;
+        
+        // If we don't have level information, allow the update
+        if (!currentLevel) return true;
+        
+        // Check if this character belongs to the current level
+        const characterLevel = this.canvas?.getAttribute('data-level') || this.data?.levelName || this.levelName;
+        
+        // Check if this is the retro level (needs special handling)
+        const isRetroLevel = gameContainer?.getAttribute('data-is-retro') === 'true';
+        if (isRetroLevel) {
+            // For retro level, be more lenient with what shows up
+            if (characterLevel && characterLevel.includes('Retro')) {
+                return true;
+            }
+            
+            // If this is specifically tagged as retro
+            if (this.data?.isRetro || this.canvas?.classList.contains('retro-element')) {
+                return true;
+            }
+        }
+        
+        // Only allow updates for characters in the current level
+        return characterLevel === currentLevel;
+    }
 
-   /**
+    /**
+     * Ensures the character is attached to the DOM
+     */
+    ensureAttachedToDOM() {
+        if (!this.canvas) return;
+        
+        // Skip entirely if this character doesn't belong to current level
+        if (!this.isInCurrentLevel()) {
+            // Hide this character since it's not part of current level
+            if (this.canvas.parentNode) {
+                this.canvas.style.display = 'none';
+                this.canvas.style.visibility = 'hidden';
+            }
+            return;
+        }
+        
+        // Check if the canvas is in the DOM
+        if (!document.body.contains(this.canvas)) {
+            console.log(`Character ${this.canvas.id} is detached, reattaching`);
+            const gameContainer = document.getElementById("gameContainer");
+            if (gameContainer) {
+                gameContainer.appendChild(this.canvas);
+            } else {
+                document.body.appendChild(this.canvas);
+            }
+            
+            // Re-setup the canvas
+            this.setupCanvas();
+            
+            // Force redraw
+            if (this.spriteSheet) {
+                this.drawSprite();
+            } else {
+                this.drawDefaultSquare();
+            }
+        }
+        
+        // Ensure visibility
+        this.ensureVisibility();
+    }
+
+    /**
      * Draws the object on the canvas.
      * 
      * This method renders the object using the sprite sheet if provided, otherwise a red square.
      */
     draw() {
+        // Ensure character is in the DOM before drawing
+        this.ensureAttachedToDOM();
+        
+        // If canvas doesn't exist or isn't in DOM, return
+        if (!this.canvas || !document.body.contains(this.canvas)) {
+            return;
+        }
+        
+        // Check if this character belongs to current level
+        if (!this.isInCurrentLevel()) {
+            // Hide character if it's not part of current level
+            this.canvas.style.display = 'none';
+            this.canvas.style.visibility = 'hidden';
+            return;
+        }
+        
+        // Ensure visibility
+        this.ensureVisibility();
+        
         // Clear the canvas before drawing
         this.clearCanvas();
 
@@ -237,8 +366,7 @@ class Character extends GameObject {
         } else {
             this.ctx.filter = 'none'; // Reset filters
         }
-    } 
-
+    }
 
     /**
      * Move the object and ensures it stays within the canvas boundaries.
@@ -274,7 +402,6 @@ class Character extends GameObject {
         }
     }
     
-
     /**
      * Resizes the object based on the game environment.
      * 
@@ -304,7 +431,26 @@ class Character extends GameObject {
         this.height = this.size;
     }
     
-
+    // Helper method to ensure visibility
+    ensureVisibility() {
+        if (this.canvas) {
+            this.canvas.style.display = 'block';
+            this.canvas.style.visibility = 'visible';
+            this.canvas.style.opacity = '1';
+            this.canvas.style.zIndex = '100'; // Ensure it's above other elements
+            
+            // Make sure position is set
+            this.canvas.style.left = `${this.position.x}px`;
+            this.canvas.style.top = `${this.gameEnv.top + this.position.y}px`;
+            
+            // Force dimensions if they're zero
+            if (parseInt(this.canvas.style.width) === 0 || parseInt(this.canvas.style.height) === 0) {
+                this.canvas.style.width = '50px';
+                this.canvas.style.height = '50px';
+            }
+        }
+    }
+    
     /* Destroy Game Object
      * remove canvas element of object
      * remove object from this.gameEnv.gameObjects array

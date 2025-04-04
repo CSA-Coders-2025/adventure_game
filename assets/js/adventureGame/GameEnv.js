@@ -102,6 +102,70 @@ class GameEnv {
     clear() {
         this.ctx.clearRect(0, 0, this.innerWidth, this.innerHeight);
     }
+
+    /**
+     * Refreshes game objects after level transitions.
+     * 
+     * This method ensures all game objects (including NPCs) are properly
+     * initialized and visible after transitioning between levels.
+     */
+    refreshGameObjects() {
+        console.log("Refreshing game objects - found:", this.gameObjects.length);
+        
+        if (this.gameObjects.length === 0) {
+            console.warn("No game objects found to refresh");
+            return;
+        }
+        
+        // Force each game object to refresh its state
+        for (const gameObject of this.gameObjects) {
+            try {
+                // Reset object visibility
+                if (gameObject.element) {
+                    gameObject.element.style.display = 'block';
+                    gameObject.element.style.visibility = 'visible';
+                    gameObject.element.style.opacity = '1';
+                }
+                
+                // If the object has a sprite, ensure it's visible
+                if (gameObject.sprite) {
+                    gameObject.sprite.style.display = 'block';
+                    gameObject.sprite.style.visibility = 'visible';
+                    gameObject.sprite.style.opacity = '1';
+                }
+                
+                // If the object has a refreshState method, call it
+                if (typeof gameObject.refreshState === 'function') {
+                    gameObject.refreshState();
+                }
+                
+                // If the object has a redraw method, call it
+                if (typeof gameObject.redraw === 'function') {
+                    gameObject.redraw();
+                }
+                
+                // Force a position update if the object has x and y coordinates
+                if (typeof gameObject.x !== 'undefined' && typeof gameObject.y !== 'undefined') {
+                    if (gameObject.element) {
+                        gameObject.element.style.left = `${gameObject.x}px`;
+                        gameObject.element.style.top = `${gameObject.y}px`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error refreshing game object:", error);
+            }
+        }
+        
+        // Redraw the canvas to ensure all elements are visible
+        this.clear();
+        for (const gameObject of this.gameObjects) {
+            if (typeof gameObject.draw === 'function') {
+                gameObject.draw();
+            }
+        }
+        
+        console.log("Game objects refresh complete");
+    }
 }
 
 export default GameEnv;

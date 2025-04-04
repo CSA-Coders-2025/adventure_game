@@ -20,6 +20,9 @@ class MinecraftInventory {
         
         MinecraftInventory.instance = this;
         
+        // Make instance globally accessible for level transitions
+        window.MinecraftInventory = MinecraftInventory;
+        
         // Wait a moment before initializing to ensure DOM is ready
         setTimeout(() => this.initialize(), 200);
     }
@@ -44,6 +47,9 @@ class MinecraftInventory {
         
         console.log('Inventory bar found!');
         
+        // Clean up any previous event listeners to avoid duplicates
+        this.cleanup();
+        
         // Add event listeners for slot selection
         this.inventoryBar.querySelectorAll('.inventory-slot').forEach((slot, index) => {
             slot.addEventListener('click', (e) => {
@@ -64,10 +70,120 @@ class MinecraftInventory {
         // Subscribe to inventory updates
         document.addEventListener('inventoryUpdated', this.handleInventoryUpdate.bind(this));
         
+        // Subscribe to level transition events
+        document.addEventListener('levelTransition', this.handleLevelTransition.bind(this));
+        
         // Manually force a direct population from inventory right now
         this.forcePopulateFromInventory();
         
+        // Make sure help guide is in the first slot for easy access
+        setTimeout(() => {
+            this.ensureHelpGuideInSlot();
+        }, 1000);
+        
         console.log('MinecraftInventory initialization complete');
+    }
+    
+    // Ensure help guide is always available in first slot
+    ensureHelpGuideInSlot() {
+        const inventory = Inventory.getInstance();
+        const helpGuideItem = inventory.items.find(item => item.id === 'help_guide');
+        
+        // If help guide exists in inventory, place it in first slot
+        if (helpGuideItem) {
+            console.log('Found help guide in inventory, placing in first slot');
+            this.setItemInSlot(0, helpGuideItem);
+            this.updateSlotDisplay(0);
+        } else {
+            // If help guide doesn't exist, add it to inventory and slot
+            console.log('Help guide not found in inventory, adding it');
+            const newHelpGuide = {
+                id: 'help_guide',
+                name: 'Help Guide',
+                description: 'A comprehensive guide on how to play the game. Press \\ key to open.',
+                emoji: '❓',
+                stackable: false,
+                value: 0,
+                quantity: 1
+            };
+            
+            inventory.addItem(newHelpGuide);
+            this.setItemInSlot(0, newHelpGuide);
+            this.updateSlotDisplay(0);
+        }
+        
+        // Select the first slot to make help guide active
+        this.selectSlot(0);
+    }
+    
+    // NEW: Handle level transitions
+    handleLevelTransition(event) {
+        console.log('Level transition detected, re-initializing inventory...');
+        
+        // Clean up
+        this.cleanup();
+        
+        // Re-initialize after a brief delay to ensure DOM is updated
+        setTimeout(() => {
+            this.initialize();
+        }, 500);
+    }
+    
+    // NEW: Cleanup method to remove event listeners and reset state
+    cleanup() {
+        console.log('Cleaning up MinecraftInventory...');
+        
+        // Remove event listeners from slots
+        if (this.inventoryBar) {
+            this.inventoryBar.querySelectorAll('.inventory-slot').forEach(slot => {
+                // Clone and replace to remove all event listeners
+                const newSlot = slot.cloneNode(true);
+                slot.parentNode.replaceChild(newSlot, slot);
+            });
+        }
+        
+        // Remove key handler
+        if (this._handleKeyDownBound) {
+            document.removeEventListener('keydown', this._handleKeyDownBound);
+            window.removeEventListener('keydown', this._handleKeyDownBound);
+            this._handleKeyDownBound = null;
+        }
+        
+        // Close any open windows
+        this.closeAllWindows();
+    }
+    
+    // NEW: Method to close all open windows
+    closeAllWindows() {
+        // Close calculator if open
+        const calculatorContainer = document.getElementById('calculator-container');
+        if (calculatorContainer && calculatorContainer.parentNode) {
+            calculatorContainer.parentNode.removeChild(calculatorContainer);
+        }
+        
+        // Close ROI calculator if open
+        const roiCalculatorContainer = document.getElementById('roi-calculator-container');
+        if (roiCalculatorContainer && roiCalculatorContainer.parentNode) {
+            roiCalculatorContainer.parentNode.removeChild(roiCalculatorContainer);
+        }
+        
+        // Close trading journal if open
+        const tradingJournalContainer = document.getElementById('trading-journal-container');
+        if (tradingJournalContainer && tradingJournalContainer.parentNode) {
+            tradingJournalContainer.parentNode.removeChild(tradingJournalContainer);
+        }
+        
+        // Close trading manual if open
+        const tradingManualContainer = document.getElementById('trading-manual-container');
+        if (tradingManualContainer && tradingManualContainer.parentNode) {
+            tradingManualContainer.parentNode.removeChild(tradingManualContainer);
+        }
+        
+        // Close help guide if open
+        const helpGuideContainer = document.getElementById('help-guide-container');
+        if (helpGuideContainer && helpGuideContainer.parentNode) {
+            helpGuideContainer.parentNode.removeChild(helpGuideContainer);
+        }
     }
     
     enableKeyboardControls() {
@@ -103,6 +219,13 @@ class MinecraftInventory {
         
         console.log('Key pressed for inventory:', key, 'Code:', code);
         
+        // Special case for help guide - ? or H key opens it directly
+        if (key === '?' || key === 'h' || key === 'H') {
+            console.log('Opening help guide directly with ? or H key');
+            this.openHelpGuideDirectly();
+            return;
+        }
+        
         // Open full inventory with . key
         if (key === '.') {
             console.log('Opening full inventory with . key');
@@ -126,27 +249,29 @@ class MinecraftInventory {
             this.selectSlot(slotIndex);
             return;
         }
+    }
+    
+    // Directly open help guide without requiring item selection
+    openHelpGuideDirectly() {
+        const inventory = Inventory.getInstance();
+        const helpGuideItem = inventory.items.find(item => item.id === 'help_guide');
         
-        // Key 0 (slot 9)
-        if (key === '0') {
-            console.log('Selecting slot 9 with key 0');
-            this.selectSlot(9);
-            return;
-        }
-        
-        // Numpad keys (Numpad1-Numpad9)
-        if (code.startsWith('Numpad') && /^Numpad[1-9]$/.test(code)) {
-            const slotIndex = parseInt(code.slice(6)) - 1;
-            console.log(`Selecting slot ${slotIndex} with numpad key ${code}`);
-            this.selectSlot(slotIndex);
-            return;
-        }
-        
-        // Numpad0 (slot 9)
-        if (code === 'Numpad0') {
-            console.log('Selecting slot 9 with Numpad0');
-            this.selectSlot(9);
-            return;
+        if (helpGuideItem) {
+            // Close any open windows first
+            this.closeAllWindows();
+            
+            // Open the help guide
+            this.openHelpGuide(helpGuideItem);
+        } else {
+            console.error('Help guide item not found in inventory');
+            // Create a temporary item to open the help guide
+            const tempHelpGuide = {
+                id: 'help_guide',
+                name: 'Help Guide',
+                description: 'A comprehensive guide on how to play the game.',
+                emoji: '❓'
+            };
+            this.openHelpGuide(tempHelpGuide);
         }
     }
     
@@ -333,44 +458,37 @@ class MinecraftInventory {
     useSelectedItemAction() {
         const selectedItem = this.getSelectedItem();
         if (!selectedItem) {
-            console.log('No item selected to use');
+            console.log('No item selected');
             return;
         }
         
-        console.log('Using selected item:', selectedItem);
+        console.log('Using item:', selectedItem.name);
         
-        // Handle different item types
-        if (selectedItem.id === 'roi_calculator') {
-            // ROI Calculator has special functionality
-            console.log('Opening ROI calculator with ID:', selectedItem.id);
-            this.openROICalculator(selectedItem);
-            return;
-        } else if (selectedItem.id === 'trading_journal') {
-            // Trading Journal
-            console.log('Opening trading journal');
-            this.openTradingJournal(selectedItem);
-            return;
-        } else if (selectedItem.id === 'trading_manual') {
-            // Trading Manual
-            console.log('Opening trading manual');
-            this.openTradingManual(selectedItem);
-            return;
-        } else if (selectedItem.isCalculator) {
-            // Regular calculator
-            console.log('Opening calculator:', selectedItem.name);
-            this.openCalculator(selectedItem);
-        } else if (selectedItem.isConsumable) {
-            // Consume the item
-            console.log('Consuming item:', selectedItem.name);
-            this.consumeItem(selectedItem);
-        } else {
-            // Default action for other items
-            console.log('Using item:', selectedItem.name);
-            this.useItem(selectedItem);
+        // Close any open windows first to prevent conflicts
+        this.closeAllWindows();
+        
+        // Handle different item actions based on the item ID
+        switch (selectedItem.id) {
+            case 'calculator':
+                this.openCalculator(selectedItem);
+                break;
+            case 'roi_calculator':
+                this.openROICalculator(selectedItem);
+                break;
+            case 'trading_journal':
+                this.openTradingJournal(selectedItem);
+                break;
+            case 'trading_manual':
+                this.openTradingManual(selectedItem);
+                break;
+            case 'help_guide':
+                this.openHelpGuide(selectedItem);
+                break;
+            // Add more items and their actions here
+            default:
+                console.log('No specific action for this item');
+                break;
         }
-        
-        // Update the display after using the item
-        this.updateSlotDisplay(this.selectedSlot);
     }
     
     // Add makeDraggable method to make windows draggable
@@ -426,293 +544,192 @@ class MinecraftInventory {
         console.log(`Opening calculator: ${item.name}`);
         
         // Create calculator container
-        const calcContainer = document.createElement('div');
-        calcContainer.id = 'calculator-container';
-        calcContainer.style.cssText = `
+        const calculatorContainer = document.createElement('div');
+        calculatorContainer.id = 'calculator-container';
+        calculatorContainer.style.cssText = `
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: #1a1a2a;
-            border: 3px solid #3498db;
+            background-color: #4a4a4a;
+            width: 250px;
             border-radius: 10px;
-            padding: 20px;
-            width: 300px;
-            z-index: 2000;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
-            color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
             font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
         `;
         
         // Create calculator header
-        const calcHeader = document.createElement('div');
-        calcHeader.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
+        const header = document.createElement('div');
+        header.className = 'calculator-header';
+        header.style.cssText = `
+            background-color: #333;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 1px solid #555;
+            cursor: move;
         `;
+        header.textContent = 'Calculator';
         
-        // Calculator title
-        const calcTitle = document.createElement('h3');
-        calcTitle.textContent = item.name;
-        calcTitle.style.cssText = `
-            margin: 0;
-            color: #3498db;
+        // Create close button
+        const closeButton = document.createElement('span');
+        closeButton.className = 'calculator-close';
+        closeButton.style.cssText = `
+            position: absolute;
+            right: 10px;
+            top: 8px;
+            cursor: pointer;
             font-size: 18px;
         `;
+        closeButton.innerHTML = '&times;';
+        closeButton.addEventListener('click', () => {
+            if (calculatorContainer.parentNode) {
+                calculatorContainer.parentNode.removeChild(calculatorContainer);
+            }
+        });
         
-        // Close button
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '×';
-        closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0 5px;
-        `;
-        closeBtn.onclick = () => {
-            document.body.removeChild(calcContainer);
-        };
+        header.appendChild(closeButton);
+        calculatorContainer.appendChild(header);
         
-        calcHeader.appendChild(calcTitle);
-        calcHeader.appendChild(closeBtn);
-        
-        // Create calculator display
-        const display = document.createElement('input');
-        display.type = 'text';
-        display.readOnly = true;
-        display.value = '0';
+        // Create display
+        const display = document.createElement('div');
+        display.className = 'calculator-display';
         display.style.cssText = `
-            width: 100%;
-            background-color: #253045;
-            color: #ffffff;
+            background-color: #222;
+            padding: 15px;
             text-align: right;
-            padding: 15px 10px;
-            margin-bottom: 15px;
-            border: none;
-            border-radius: 5px;
-            font-family: monospace;
             font-size: 24px;
-            box-sizing: border-box;
+            height: 30px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         `;
+        display.textContent = '0';
+        calculatorContainer.appendChild(display);
         
-        // Create calculator buttons container
+        // Create buttons container
         const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'calculator-buttons';
         buttonsContainer.style.cssText = `
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            gap: 1px;
+            background-color: #333;
+            padding: 10px;
         `;
         
-        // Button style function
-        const getButtonStyle = (type) => {
-            let bgColor = '#2c3e50';
-            let color = 'white';
-            
-            if (type === 'operator') {
-                bgColor = '#e67e22';
-            } else if (type === 'equals') {
-                bgColor = '#2ecc71';
-            } else if (type === 'clear') {
-                bgColor = '#e74c3c';
+        // Button values
+        const buttons = [
+            'C', '÷', '×', '⌫',
+            '7', '8', '9', '-',
+            '4', '5', '6', '+',
+            '1', '2', '3', '=',
+            '0', '.', '(', ')'
+        ];
+        
+        // Button styles
+        const getButtonStyle = (value) => {
+            let bgColor;
+            if (['C', '⌫'].includes(value)) {
+                bgColor = '#e74c3c'; // Red for clear/delete
+            } else if (['+', '-', '×', '÷'].includes(value)) {
+                bgColor = '#3498db'; // Blue for operators
+            } else if (value === '=') {
+                bgColor = '#2ecc71'; // Green for equals
+            } else if (['(', ')'].includes(value)) {
+                bgColor = '#9b59b6'; // Purple for parentheses
+            } else {
+                bgColor = '#555'; // Grey for numbers and dot
             }
             
             return `
                 background-color: ${bgColor};
-                color: ${color};
+                color: white;
                 border: none;
-                border-radius: 5px;
-                padding: 15px 0;
+                padding: 15px;
                 font-size: 18px;
                 cursor: pointer;
+                text-align: center;
                 transition: background-color 0.2s;
+                user-select: none;
             `;
         };
         
-        // Calculator buttons data
-        const buttons = [
-            { text: 'C', type: 'clear', value: 'clear' },
-            { text: '←', type: 'operator', value: 'backspace' },
-            { text: '%', type: 'operator', value: '%' },
-            { text: '÷', type: 'operator', value: '/' },
-            { text: '7', type: 'number', value: '7' },
-            { text: '8', type: 'number', value: '8' },
-            { text: '9', type: 'number', value: '9' },
-            { text: '×', type: 'operator', value: '*' },
-            { text: '4', type: 'number', value: '4' },
-            { text: '5', type: 'number', value: '5' },
-            { text: '6', type: 'number', value: '6' },
-            { text: '-', type: 'operator', value: '-' },
-            { text: '1', type: 'number', value: '1' },
-            { text: '2', type: 'number', value: '2' },
-            { text: '3', type: 'number', value: '3' },
-            { text: '+', type: 'operator', value: '+' },
-            { text: '0', type: 'number', value: '0', span: 2 },
-            { text: '.', type: 'number', value: '.' },
-            { text: '=', type: 'equals', value: '=' }
-        ];
+        // Current calculation state
+        let currentExpression = '';
+        let showingResult = false;
         
-        // Add buttons to container
-        buttons.forEach(button => {
-            const btn = document.createElement('button');
-            btn.textContent = button.text;
-            btn.style.cssText = getButtonStyle(button.type);
+        // Update display
+        const updateDisplay = (text) => {
+            display.textContent = text || '0';
+        };
+        
+        // Add buttons with event listeners
+        buttons.forEach(value => {
+            const button = document.createElement('div');
+            button.className = 'calculator-button';
+            button.style.cssText = getButtonStyle(value);
+            button.textContent = value;
             
-            if (button.span) {
-                btn.style.gridColumn = `span ${button.span}`;
-            }
-            
-            btn.addEventListener('click', () => handleCalculatorInput(button.value));
-            buttonsContainer.appendChild(btn);
-        });
-        
-        // Add all elements to container
-        calcContainer.appendChild(calcHeader);
-        calcContainer.appendChild(display);
-        calcContainer.appendChild(buttonsContainer);
-        
-        // Add to document
-        document.body.appendChild(calcContainer);
-        
-        // Make the calculator draggable
-        this.makeDraggable(calcContainer);
-        
-        // Calculator variables
-        let currentInput = '0';
-        let previousInput = '';
-        let operation = null;
-        let shouldResetDisplay = false;
-        
-        // Handle calculator input
-        const handleCalculatorInput = (value) => {
-            // Handle numbers
-            if (!isNaN(value) || value === '.') {
-                if (shouldResetDisplay) {
-                    currentInput = '0';
-                    shouldResetDisplay = false;
+            button.addEventListener('click', () => {
+                if (showingResult && !['C', '⌫', '+', '-', '×', '÷'].includes(value)) {
+                    currentExpression = '';
+                    showingResult = false;
                 }
                 
-                // Handle decimal point
-                if (value === '.') {
-                    if (!currentInput.includes('.')) {
-                        currentInput += '.';
+                if (value === 'C') {
+                    // Clear
+                    currentExpression = '';
+                    updateDisplay('0');
+                } else if (value === '⌫') {
+                    // Backspace
+                    currentExpression = currentExpression.slice(0, -1);
+                    updateDisplay(currentExpression);
+                } else if (value === '=') {
+                    // Calculate
+                    try {
+                        // Replace × and ÷ with * and /
+                        const evalExpression = currentExpression
+                            .replace(/×/g, '*')
+                            .replace(/÷/g, '/');
+                        
+                        const result = eval(evalExpression);
+                        updateDisplay(result);
+                        currentExpression = result.toString();
+                        showingResult = true;
+                    } catch (error) {
+                        updateDisplay('Error');
+                        showingResult = true;
                     }
                 } else {
-                    // Handle regular numbers
-                    currentInput = currentInput === '0' ? value : currentInput + value;
+                    // Add to expression
+                    currentExpression += value;
+                    updateDisplay(currentExpression);
                 }
-                
-                display.value = currentInput;
-            }
-            // Handle operators
-            else if (['+', '-', '*', '/', '%'].includes(value)) {
-                if (operation !== null && !shouldResetDisplay) {
-                    calculate();
-                }
-                
-                previousInput = currentInput;
-                operation = value;
-                shouldResetDisplay = true;
-            }
-            // Handle equals
-            else if (value === '=') {
-                if (operation) {
-                    calculate();
-                    operation = null;
-                }
-            }
-            // Handle clear
-            else if (value === 'clear') {
-                currentInput = '0';
-                previousInput = '';
-                operation = null;
-                shouldResetDisplay = false;
-                display.value = currentInput;
-            }
-            // Handle backspace
-            else if (value === 'backspace') {
-                if (currentInput.length > 1) {
-                    currentInput = currentInput.slice(0, -1);
-                } else {
-                    currentInput = '0';
-                }
-                display.value = currentInput;
-            }
-        };
+            });
+            
+            buttonsContainer.appendChild(button);
+        });
         
-        // Calculate result
-        const calculate = () => {
-            let result = 0;
-            const prev = parseFloat(previousInput);
-            const current = parseFloat(currentInput);
-            
-            switch (operation) {
-                case '+':
-                    result = prev + current;
-                    break;
-                case '-':
-                    result = prev - current;
-                    break;
-                case '*':
-                    result = prev * current;
-                    break;
-                case '/':
-                    result = prev / current;
-                    break;
-                case '%':
-                    result = prev % current;
-                    break;
-            }
-            
-            // Handle long decimals and scientific notation
-            if (result.toString().includes('e') || result.toString().length > 12) {
-                currentInput = result.toExponential(5);
-            } else {
-                currentInput = result.toString();
-            }
-            
-            display.value = currentInput;
-            shouldResetDisplay = true;
-        };
+        calculatorContainer.appendChild(buttonsContainer);
         
-        // Allow keyboard input
-        const handleKeyDown = (e) => {
-            const key = e.key;
-            
-            // Prevent default action for calculator keys
-            if (
-                !isNaN(key) || 
-                key === '.' || 
-                ['+', '-', '*', '/', '%', 'Enter', 'Backspace', 'Delete', 'Escape'].includes(key)
-            ) {
-                e.preventDefault();
-            }
-            
-            // Map keyboard keys to calculator actions
-            if (!isNaN(key) || key === '.') {
-                handleCalculatorInput(key);
-            } else if (['+', '-', '*', '/'].includes(key)) {
-                handleCalculatorInput(key);
-            } else if (key === 'Enter') {
-                handleCalculatorInput('=');
-            } else if (key === 'Backspace') {
-                handleCalculatorInput('backspace');
-            } else if (key === 'Delete' || key === 'Escape') {
-                if (key === 'Escape') {
-                    document.body.removeChild(calcContainer);
-                    document.removeEventListener('keydown', handleKeyDown);
-                } else {
-                    handleCalculatorInput('clear');
-                }
-            }
-        };
+        // Add to document
+        document.body.appendChild(calculatorContainer);
         
-        document.addEventListener('keydown', handleKeyDown);
+        // Make the calculator draggable - ensure we're using the instance method
+        if (typeof this.makeDraggable === 'function') {
+            try {
+                this.makeDraggable(calculatorContainer);
+                console.log('Calculator made draggable successfully');
+            } catch (error) {
+                console.error('Error making calculator draggable:', error);
+            }
+        } else {
+            console.error('makeDraggable method not found on MinecraftInventory instance');
+        }
     }
     
     openROICalculator(item) {
@@ -1878,6 +1895,254 @@ class MinecraftInventory {
             pages[0].classList.add('active');
             
         }, 100);
+    }
+    
+    openHelpGuide(item) {
+        console.log(`Opening help guide: ${item.name}`);
+        
+        // Add styles to ensure help guide looks good
+        const styleId = 'help-guide-styles';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                #help-guide-container {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: #8B4513;
+                    width: 700px;
+                    max-width: 90vw;
+                    height: 500px;
+                    max-height: 90vh;
+                    border-radius: 10px;
+                    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+                    z-index: 1000;
+                    font-family: 'Minecraft', Arial, sans-serif;
+                    color: white;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    border: 8px solid #A0522D;
+                }
+                .help-guide-header {
+                    background-color: #5D4037;
+                    padding: 10px 20px;
+                    text-align: center;
+                    font-weight: bold;
+                    border-bottom: 4px solid #A0522D;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .help-guide-content {
+                    flex: 1;
+                    display: flex;
+                    background-color: #FFFCF0;
+                    border: 4px solid #A0522D;
+                    margin: 10px;
+                    border-radius: 5px;
+                    overflow: hidden;
+                    color: #333;
+                    position: relative;
+                    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+                }
+                .help-guide-page {
+                    flex: 1;
+                    padding: 20px;
+                    overflow-y: auto;
+                    position: relative;
+                }
+                .left-page {
+                    border-right: 1px solid #D2B48C;
+                }
+                .page-number {
+                    position: absolute;
+                    bottom: 10px;
+                    font-size: 12px;
+                    color: #777;
+                }
+                .left-page .page-number {
+                    left: 20px;
+                }
+                .right-page .page-number {
+                    right: 20px;
+                }
+                .help-guide-navigation {
+                    display: flex;
+                    justify-content: space-between;
+                    background-color: #5D4037;
+                    padding: 10px 20px;
+                    border-top: 4px solid #A0522D;
+                }
+                .help-guide-navigation button {
+                    background-color: #8B4513;
+                    color: white;
+                    border: none;
+                    padding: 8px 15px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: background-color 0.2s;
+                }
+                .help-guide-navigation button:hover:not(:disabled) {
+                    background-color: #A0522D;
+                }
+                .help-guide-navigation button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Create help guide container
+        const helpGuideContainer = document.createElement('div');
+        helpGuideContainer.id = 'help-guide-container';
+        
+        // Create help guide header
+        const header = document.createElement('div');
+        header.className = 'help-guide-header';
+        header.innerHTML = '<span>Game Help Guide</span>';
+        
+        // Create close button
+        const closeButton = document.createElement('button');
+        closeButton.className = 'help-guide-close';
+        closeButton.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        `;
+        closeButton.innerHTML = '✖';
+        closeButton.addEventListener('click', () => {
+            if (helpGuideContainer.parentNode) {
+                helpGuideContainer.parentNode.removeChild(helpGuideContainer);
+            }
+        });
+        
+        header.appendChild(closeButton);
+        helpGuideContainer.appendChild(header);
+        
+        // Create book content container with book-like appearance
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'help-guide-content';
+        
+        // Create left and right pages
+        const leftPage = document.createElement('div');
+        leftPage.className = 'help-guide-page left-page';
+        
+        const rightPage = document.createElement('div');
+        rightPage.className = 'help-guide-page right-page';
+        
+        // Add page numbers
+        const leftPageNum = document.createElement('div');
+        leftPageNum.className = 'page-number';
+        leftPageNum.textContent = '1';
+        
+        const rightPageNum = document.createElement('div');
+        rightPageNum.className = 'page-number';
+        rightPageNum.textContent = '2';
+        
+        leftPage.appendChild(leftPageNum);
+        rightPage.appendChild(rightPageNum);
+        
+        // Add page content - Introduction
+        leftPage.innerHTML += `
+            <h1 style="color: #8B4513; text-align: center; font-size: 24px; margin-bottom: 20px;">Adventure Game Guide</h1>
+            <p style="margin-bottom: 15px;">Welcome to the Adventure Game! This guide will help you understand how to play the game and navigate through the different levels.</p>
+            <h2 style="color: #8B4513; font-size: 18px; margin: 15px 0 10px 0;">Basic Controls</h2>
+            <ul style="padding-left: 20px; margin-bottom: 15px;">
+                <li style="margin-bottom: 8px;"><strong>W, A, S, D</strong> - Move your character</li>
+                <li style="margin-bottom: 8px;"><strong>1-9 Keys</strong> - Select inventory slots</li>
+                <li style="margin-bottom: 8px;"><strong>Backslash (\\)</strong> - Use selected item</li>
+                <li style="margin-bottom: 8px;"><strong>Period (.)</strong> - Open full inventory</li>
+                <li style="margin-bottom: 8px;"><strong>Click</strong> - Interact with NPCs</li>
+            </ul>
+        `;
+        
+        rightPage.innerHTML += `
+            <h2 style="color: #8B4513; font-size: 18px; margin: 15px 0 10px 0;">Game Objectives</h2>
+            <p style="margin-bottom: 15px;">Your main objectives in this game are:</p>
+            <ol style="padding-left: 20px; margin-bottom: 15px;">
+                <li style="margin-bottom: 8px;">Explore different levels</li>
+                <li style="margin-bottom: 8px;">Interact with NPCs to learn about trading</li>
+                <li style="margin-bottom: 8px;">Collect items and tools for your inventory</li>
+                <li style="margin-bottom: 8px;">Use trading tools to make decisions</li>
+                <li style="margin-bottom: 8px;">Complete mini-games and challenges</li>
+            </ol>
+            <h2 style="color: #8B4513; font-size: 18px; margin: 15px 0 10px 0;">Levels</h2>
+            <p style="margin-bottom: 15px;">The game has multiple levels including:</p>
+            <ul style="padding-left: 20px;">
+                <li style="margin-bottom: 8px;"><strong>Airport</strong> - Starting area</li>
+                <li style="margin-bottom: 8px;"><strong>Retro City</strong> - Play mini-games</li>
+                <li style="margin-bottom: 8px;"><strong>Silicon Valley</strong> - Learn about tech investments</li>
+            </ul>
+        `;
+        
+        // Add pages to content container
+        contentContainer.appendChild(leftPage);
+        contentContainer.appendChild(rightPage);
+        
+        // Add navigation buttons at bottom
+        const navContainer = document.createElement('div');
+        navContainer.className = 'help-guide-navigation';
+        
+        // Previous page button
+        const prevButton = document.createElement('button');
+        prevButton.textContent = '◀ Previous Page';
+        prevButton.style.cssText = `
+            background-color: #8B4513;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        `;
+        prevButton.addEventListener('mouseover', () => {
+            prevButton.style.backgroundColor = '#A0522D';
+        });
+        prevButton.addEventListener('mouseout', () => {
+            prevButton.style.backgroundColor = '#8B4513';
+        });
+        
+        // Next page button
+        const nextButton = document.createElement('button');
+        nextButton.textContent = 'Next Page ▶';
+        nextButton.style.cssText = `
+            background-color: #8B4513;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        `;
+        nextButton.addEventListener('mouseover', () => {
+            nextButton.style.backgroundColor = '#A0522D';
+        });
+        nextButton.addEventListener('mouseout', () => {
+            nextButton.style.backgroundColor = '#8B4513';
+        });
+        
+        navContainer.appendChild(prevButton);
+        navContainer.appendChild(nextButton);
+        
+        // Add content and navigation to container
+        helpGuideContainer.appendChild(contentContainer);
+        helpGuideContainer.appendChild(navContainer);
+        
+        // Add to document
+        document.body.appendChild(helpGuideContainer);
+        
+        // Make the help guide draggable
+        this.makeDraggable(helpGuideContainer);
     }
     
     consumeItem(item) {

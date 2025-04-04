@@ -63,14 +63,28 @@ class GameLevelAirport {
           alert(sprite_greet_pilot);
         },
         interact: function() {
-          let primaryGame = gameEnv.gameControl;
-          let levelArray = [GameLevelSiliconValley];
-          let gameInGame = new GameControl(gameEnv.game, levelArray);
+          console.log("Starting transition to Silicon Valley...");
+          
+          // Get the game control instance
+          const primaryGame = gameEnv.gameControl;
+          
+          // Create the new level array with Silicon Valley
+          const levelArray = [GameLevelSiliconValley];
+          
+          // Create a new game control with the Silicon Valley level
+          const gameInGame = new GameControl(gameEnv.game, levelArray);
+          
+          // Pause the current game
           primaryGame.pause();
+          
+          // Start the new level
           gameInGame.start();
+          
+          // Set up the game over callback to resume the primary game
           gameInGame.gameOver = function() {
+            console.log("Returning from Silicon Valley to Airport...");
             primaryGame.resume();
-          }
+          };
         }
     };
     // NPC data for Worker
@@ -87,6 +101,37 @@ class GameLevelAirport {
         orientation: {rows: 1, columns: 1 },
         down: {row: 0, start: 0, columns: 1 },
         hitbox: { widthPercentage: 0.1, heightPercentage: 0.1 },
+        // Item dropping functionality
+        dropItems: [
+            {
+                id: 'airport_keycard',
+                name: 'Airport Access Keycard',
+                description: 'A special keycard that grants access to restricted airport areas.',
+                emoji: '🔑',
+                stackable: false,
+                value: 500,
+                quantity: 1
+            },
+            {
+                id: 'trading_chip',
+                name: 'Trading Chip',
+                description: 'A valuable chip used for trading with NPCs in Silicon Valley.',
+                emoji: '💰',
+                stackable: true,
+                value: 100,
+                quantity: 5
+            },
+            {
+                id: 'tech_manual',
+                name: 'Tech Manual',
+                description: 'Contains valuable information about Silicon Valley technologies.',
+                emoji: '📘',
+                stackable: false,
+                value: 250,
+                quantity: 1
+            }
+        ],
+        dropChance: 1.0, // 100% chance to drop an item
         reaction: function () {
             alert(sprite_greet_worker);
         },
