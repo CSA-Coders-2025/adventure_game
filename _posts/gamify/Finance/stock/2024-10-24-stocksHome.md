@@ -786,7 +786,7 @@ async function fetchAndUpdateLiveBalanceChart() {
         }
 
         const data = await response.json();
-        const balance = parseFloat(data.balance);
+        const balance = parseFloat(data.banks.balance);
 
         // Add new data point
         const currentTime = getFormattedTime();
