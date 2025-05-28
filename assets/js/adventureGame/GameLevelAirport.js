@@ -454,7 +454,7 @@ class GameLevelAirport {
           intro: function() {
           showDialogBox(
             "Satoshi Nakamoto",
-            "Greetings, seeker. I am Satoshi Nakamoto, architect of decentralized currency.\nAre you curious about Bitcoin or ready to explore the Crypto Hub?",
+            "Greetings, seeker. I am  Satoshi Nakamoto, architect of decentralized currency.\nAre you curious about Bitcoin or ready to explore the Crypto Hub?",
             [
                 { label: "Tell me about Bitcoin", action: () => dialogFunctions.aboutBitcoin(), keepOpen: true },
               { label: "Go to Crypto Hub", action: () => openInModal("https://nighthawkcoders.github.io/portfolio_2025/crypto/portfolio") },
